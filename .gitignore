@@ -1,0 +1,12 @@
+# runtime data, never commit City / production GIS exports
+workspaces/
+data/
+*.sqlite
+# environments & builds
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+# secrets
+.env
+*.key

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HPW GIS Workbench</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b5cad'/%3E%3Cpath d='M7 22l6-12 5 8 3-4 4 8z' fill='%23fff'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <script>
+    // apply saved theme before paint
+    try { const t = localStorage.getItem("hpw-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <div id="file-warning" hidden>
+    <h2>Open the workbench through the local server</h2>
+    <p>This page was opened directly from disk, so it cannot reach the GIS engine.</p>
+    <p><b>Double-click <code>Start-Workbench.bat</code></b> in the project folder. It opens the workbench in its own window.</p>
+  </div>
+
+  <div class="app" id="app">
+    <!-- ======================= title bar ======================= -->
+    <header class="titlebar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="22" height="22"><rect width="32" height="32" rx="7" fill="#1769aa"/><path d="M7 22l6-12 5 8 3-4 4 8z" fill="#fff"/></svg>
+        </span>
+        <span class="brand-name">HPW GIS Workbench</span>
+        <span class="brand-sep">/</span>
+        <span class="project-name" id="project-name">Untitled project</span>
+      </div>
+      <div class="title-search">
+        <span data-icon="search"></span>
+        <input id="global-search" type="search" placeholder="Search layers and tools…" aria-label="Search layers and tools" autocomplete="off" />
+        <div class="search-results" id="search-results" hidden></div>
+      </div>
+      <div class="title-actions">
+        <span class="engine-status" id="engine-status" title="GIS engine status"><i></i><b>Connecting…</b></span>
+        <button class="icon-btn" id="theme-toggle" title="Toggle light / dark theme" aria-label="Toggle theme"><span data-icon="moon"></span></button>
+      </div>
+    </header>
+
+    <!-- ======================= ribbon ======================= -->
+    <nav class="ribbon" aria-label="Ribbon">
+      <div class="ribbon-tabs" role="tablist">
+        <button role="tab" class="rtab active" data-tab="map">Map</button>
+        <button role="tab" class="rtab" data-tab="analysis">Analysis</button>
+        <button role="tab" class="rtab" data-tab="spacetime">Space-Time</button>
+        <button role="tab" class="rtab" data-tab="data">Data</button>
+        <button role="tab" class="rtab" data-tab="view">View</button>
+      </div>
+
+      <div class="ribbon-body">
+        <!-- MAP -->
+        <div class="rpanel active" data-panel="map">
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big mode" data-mode="identify" aria-pressed="true"><span data-icon="cursor"></span><span>Explore</span></button>
+              <button class="rbtn big mode" data-mode="select" aria-pressed="false"><span data-icon="select"></span><span>Select</span></button>
+              <div class="rstack">
+                <button class="rbtn small" data-action="clear-selection"><span data-icon="clear"></span><span>Clear <b id="sel-total">0</b></span></button>
+                <button class="rbtn small" data-action="zoom-selection"><span data-icon="zoomsel"></span><span>Zoom to selection</span></button>
+              </div>
+            </div>
+            <div class="rgroup-label">Navigate &amp; Select</div>
+          </div>
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big" data-action="full-extent"><span data-icon="extent"></span><span>Full extent</span></button>
+              <div class="rstack">
+                <button class="rbtn small" data-action="zoom-in"><span data-icon="plus"></span><span>Zoom in</span></button>
+                <button class="rbtn small" data-action="zoom-out"><span data-icon="minus"></span><span>Zoom out</span></button>
+              </div>
+            </div>
+            <div class="rgroup-label">Zoom</div>
+          </div>
+          <div class="rgroup">
+            <div class="rgroup-items basemaps" id="basemap-gallery"></div>
+            <div class="rgroup-label">Basemap</div>
+          </div>
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big toggle3d" data-action="buildings-3d" aria-pressed="false" title="3D buildings (OpenStreetMap heights via OpenFreeMap, online)"><span data-icon="buildings"></span><span>3D buildings</span></button>
+              <div class="rstack">
+                <button class="rbtn small" data-action="tilt" aria-pressed="false"><span data-icon="tilt"></span><span>Tilt view</span></button>
+                <button class="rbtn small" data-action="north"><span data-icon="compass"></span><span>Reset north</span></button>
+              </div>
+            </div>
+            <div class="rgroup-label">3D</div>
+          </div>
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big" data-action="add-data"><span data-icon="library"></span><span>Add data</span></button>
+            </div>
+            <div class="rgroup-label">Layer</div>
+          </div>
+        </div>
+
+        <!-- SPACE-TIME -->
+        <div class="rpanel" data-panel="spacetime">
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big" data-action="st-dashboard"><span data-icon="dashboard"></span><span>Space-time dashboard</span></button>
+            </div>
+            <div class="rgroup-label">Guided analysis</div>
+          </div>
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big" data-tool="management.feature_to_point"><span data-icon="topoint"></span><span>Feature To Point</span></button>
+              <button class="rbtn big" data-tool="stpm.create_space_time_cube"><span data-icon="cube"></span><span>Create cube</span></button>
+              <button class="rbtn big" data-tool="stpm.emerging_hot_spot_analysis"><span data-icon="hotspot"></span><span>Emerging hot spots</span></button>
+            </div>
+            <div class="rgroup-label">Space Time Pattern Mining tools</div>
+          </div>
+        </div>
+
+        <!-- ANALYSIS -->
+        <div class="rpanel" data-panel="analysis">
+          <div class="rgroup">
+            <div class="rgroup-items" id="ribbon-tools"></div>
+            <div class="rgroup-label">Geoprocessing tools</div>
+          </div>
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big" data-action="show-tools"><span data-icon="toolbox"></span><span>All tools</span></button>
+              <button class="rbtn big" data-action="show-history"><span data-icon="history"></span><span>History</span></button>
+            </div>
+            <div class="rgroup-label">Geoprocessing</div>
+          </div>
+        </div>
+
+        <!-- DATA -->
+        <div class="rpanel" data-panel="data">
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big" data-action="add-data"><span data-icon="adddata"></span><span>Add data</span></button>
+              <button class="rbtn big" data-action="open-table"><span data-icon="table"></span><span>Attribute table</span></button>
+              <button class="rbtn big" data-action="layer-props"><span data-icon="info"></span><span>Properties</span></button>
+            </div>
+            <div class="rgroup-label">Layer</div>
+          </div>
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big" data-action="open-project"><span data-icon="folder"></span><span>Open project</span></button>
+              <button class="rbtn big" data-action="save-project"><span data-icon="save"></span><span>Save project</span></button>
+            </div>
+            <div class="rgroup-label">Project</div>
+          </div>
+        </div>
+
+        <!-- VIEW -->
+        <div class="rpanel" data-panel="view">
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big toggle" data-pane="left" aria-pressed="true"><span data-icon="paneleft"></span><span>Contents</span></button>
+              <button class="rbtn big toggle" data-pane="bottom" aria-pressed="true"><span data-icon="panebottom"></span><span>Table</span></button>
+              <button class="rbtn big toggle" data-pane="right" aria-pressed="true"><span data-icon="paneright"></span><span>Geoprocessing</span></button>
+            </div>
+            <div class="rgroup-label">Panes</div>
+          </div>
+          <div class="rgroup">
+            <div class="rgroup-items">
+              <button class="rbtn big" data-action="theme"><span data-icon="moon"></span><span>Light / Dark</span></button>
+            </div>
+            <div class="rgroup-label">Appearance</div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ======================= workspace ======================= -->
+    <div class="workspace" id="workspace">
+      <aside class="pane pane-left" id="pane-left" aria-label="Contents">
+        <div class="pane-head">
+          <h2>Contents</h2>
+          <div class="pane-head-actions">
+            <button class="icon-btn" data-action="add-data" title="Add data" aria-label="Add data"><span data-icon="plus"></span></button>
+            <button class="icon-btn" data-pane-close="left" title="Close pane" aria-label="Close contents pane"><span data-icon="close"></span></button>
+          </div>
+        </div>
+        <div class="pane-filter">
+          <span data-icon="search"></span>
+          <input id="layer-filter" type="search" placeholder="Filter layers" aria-label="Filter layers" />
+        </div>
+        <div class="pane-body" id="contents"></div>
+      </aside>
+      <div class="splitter v" data-split="left" aria-hidden="true"></div>
+
+      <main class="center">
+        <div class="map-wrap">
+          <div id="map" class="map"></div>
+          <div class="map-hint" id="map-hint" hidden>Drag a box to select · <kbd>Shift</kbd> add · <kbd>Ctrl</kbd> remove · <kbd>Esc</kbd> done</div>
+          <div class="select-box" id="select-box" hidden></div>
+          <div class="map-legend" id="map-legend"></div>
+        </div>
+        <div class="splitter h" data-split="bottom" aria-hidden="true"></div>
+        <section class="pane-bottom" id="pane-bottom" aria-label="Attribute tables"></section>
+      </main>
+
+      <div class="splitter v" data-split="right" aria-hidden="true"></div>
+      <aside class="pane pane-right" id="pane-right" aria-label="Geoprocessing">
+        <div class="pane-head tabs">
+          <button class="ptab active" data-ptab="tools"><span data-icon="toolbox"></span>Geoprocessing</button>
+          <button class="ptab" data-ptab="spacetime"><span data-icon="hotspot"></span>Space-Time</button>
+          <button class="ptab" data-ptab="history"><span data-icon="history"></span>History</button>
+          <button class="icon-btn push" data-pane-close="right" title="Close pane" aria-label="Close geoprocessing pane"><span data-icon="close"></span></button>
+        </div>
+        <div class="pane-body" id="gp"></div>
+      </aside>
+    </div>
+
+    <!-- ======================= status bar ======================= -->
+    <footer class="statusbar">
+      <span id="sb-coords" class="mono">—</span>
+      <span id="sb-scale" class="mono"></span>
+      <span class="sb-sep"></span>
+      <span id="sb-selection"></span>
+      <span id="sb-warn" class="warn"></span>
+      <span class="sb-fill"></span>
+      <span id="sb-job"></span>
+      <span class="muted">Local engine · 127.0.0.1 · no cloud</span>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="popover-root" id="popover-root"></div>
+
+  <script>
+    // Opened from disk: jump to the local server automatically if it is running;
+    // otherwise show the instructions and keep checking until it comes up.
+    if (location.protocol === "file:") {
+      document.getElementById("app").hidden = true;
+      const SERVER = "http://127.0.0.1:8000/";
+      let shown = false;
+      const probe = () =>
+        fetch(SERVER + "api/health", { mode: "no-cors", cache: "no-store" })
+          .then(() => location.replace(SERVER))
+          .catch(() => {
+            if (!shown) { document.getElementById("file-warning").hidden = false; shown = true; }
+            setTimeout(probe, 2000);
+          });
+      probe();
+    }
+  </script>
+  <script src="vendor/maplibre/maplibre-gl.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

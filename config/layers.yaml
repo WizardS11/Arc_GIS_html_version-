@@ -1,0 +1,44 @@
+# Layer descriptors (spec §4.1). Registering a new layer requires only a descriptor here or an import -
+# no per-layer code. ${FIXTURES} / ${DATA_ROOT} / ${PROJECT_ROOT} are expanded at load time.
+#
+# All layers below are SYNTHETIC QA fixtures (see fixtures/README.md). Replace/add real HPW layers by
+# pointing `source.uri` at ${DATA_ROOT}/... and confirming CRS, primary key and relationships.
+
+layers:
+  - layer_id: manholes
+    label: Manholes (synthetic)
+    source: {uri: "${FIXTURES}/manholes.gpkg", format: gpkg, refresh_policy: manual}
+    geometry: {type: Point}            # CRS read from the GeoPackage (EPSG:2278)
+    identity: {primary_key: UFID, natural_keys: [MH_NUMBER]}
+    permissions: {source_read_only: true, allow_derived_outputs: true, allow_source_edits: false}
+    metadata: {lineage_tier: bronze, owner: configured_by_deployment}
+
+  - layer_id: gravity_mains
+    label: Gravity Mains (synthetic)
+    source: {uri: "${FIXTURES}/gravity_mains.gpkg", format: gpkg, refresh_policy: manual}
+    geometry: {type: LineString}
+    identity: {primary_key: UFID}
+    relationships:
+      - {local_field: US_MANHOLE, target_layer: manholes, target_field: MH_NUMBER, kind: many_to_one, validation: explicit}
+      - {local_field: DS_MANHOLE, target_layer: manholes, target_field: MH_NUMBER, kind: many_to_one, validation: explicit}
+
+  - layer_id: sewer_basins
+    label: Sewer Basins (synthetic)
+    source: {uri: "${FIXTURES}/sewer_basins.parquet", format: geoparquet, refresh_policy: manual}
+    geometry: {type: Polygon}
+    identity: {primary_key: BASIN_ID}
+
+  - layer_id: level_sensors
+    label: Level Sensors (synthetic, WGS84)
+    source: {uri: "${FIXTURES}/level_sensors.csv", format: csv, refresh_policy: manual}
+    csv: {x_field: longitude, y_field: latitude}
+    geometry: {type: Point, crs: "EPSG:4326"}   # stated by the (synthetic) data owner
+    identity: {primary_key: site_id}           # site_name is NOT unique
+    relationships:
+      - {local_field: linked_mh_ufid, target_layer: manholes, target_field: UFID, kind: many_to_one, validation: explicit}
+
+  - layer_id: sso_events
+    label: SSO Events (synthetic, no .prj)
+    source: {uri: "${FIXTURES}/sso_events_no_prj.zip", format: shapefile_zip, refresh_policy: manual}
+    geometry: {type: Point}            # CRS deliberately UNKNOWN - demonstrates the CRS safeguard
+    identity: {primary_key: EVENT_ID}
